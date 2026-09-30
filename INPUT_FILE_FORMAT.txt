@@ -1,0 +1,83 @@
+FLY-IN — INPUT MAP FILE FORMAT
+================================
+
+REQUIRED STRUCTURE
+-------------------
+- First line MUST be: nb_drones: <positive_integer>
+- Exactly ONE start_hub line and exactly ONE end_hub line.
+- Any number of hub (regular zone) lines.
+- Zone line formats:
+    start_hub: <name> <x> <y> [metadata]
+    end_hub:   <name> <x> <y> [metadata]
+    hub:       <name> <x> <y> [metadata]
+- Connection line format:
+    connection: <name1>-<name2> [metadata]
+- Comments start with '#' and are ignored.
+- Blank/comment lines aside, every other line must match one of the above formats.
+
+ZONE RULES
+----------
+- Each zone name must be UNIQUE.
+- Coordinates (x, y) must be valid INTEGERS.
+- Zone names may use any valid characters EXCEPT dashes (-) and spaces.
+- Metadata is optional, enclosed in [ ... ], tags can appear in any order:
+    zone=<type>        default: normal
+    color=<value>       default: none (any single-word string, e.g. red, blue, gray)
+    max_drones=<N>      default: 1   (must be a positive integer)
+- Valid zone types (anything else is an error): normal, blocked, restricted, priority
+    normal      -> 1 turn to enter (default)
+    priority    -> 1 turn to enter, should be preferred by pathfinding
+    restricted  -> 2 turns to enter (multi-turn transit, see CONNECTION RULES)
+    blocked     -> cannot be entered or passed through at all
+
+CONNECTION RULES
+-----------------
+- connection: <name1>-<name2> [metadata]
+- Connections are BIDIRECTIONAL.
+- Both <name1> and <name2> must reference zones ALREADY DEFINED earlier in the file.
+- Optional metadata:
+    max_link_capacity=<N>   default: 1   (must be a positive integer, max drones traversing simultaneously)
+- A given connection must not appear more than once
+  (a-b and b-a count as the SAME connection — duplicate = error).
+
+COORDINATES / UNIQUENESS GUARANTEES (given by the subject)
+------------------------------------------------------------
+- Coordinates will always be integers.
+- There will always be a unique start zone and a unique end zone.
+
+VALID EXAMPLE
+-------------
+nb_drones: 5
+
+start_hub: hub 0 0 [color=green]
+end_hub: goal 10 10 [color=yellow]
+hub: roof1 3 4 [zone=restricted color=red]
+hub: roof2 6 2 [zone=normal color=blue]
+hub: corridorA 4 3 [zone=priority color=green max_drones=2]
+hub: tunnelB 7 4 [zone=normal color=red]
+hub: obstacleX 5 5 [zone=blocked color=gray]
+connection: hub-roof1
+connection: hub-corridorA
+connection: roof1-roof2
+connection: roof2-goal
+connection: corridorA-tunnelB [max_link_capacity=2]
+connection: tunnelB-goal
+
+
+FORBIDDEN / MUST BE REJECTED WITH A CLEAR ERROR (line + cause)
+------------------------------------------------------------------
+- Missing or malformed first line (no "nb_drones: <positive_integer>").
+- nb_drones not a positive integer.
+- Missing start_hub, missing end_hub, or more than one of either.
+- Duplicate zone names.
+- Non-integer coordinates.
+- Dashes or spaces inside a zone name.
+- A connection referencing a zone name that was not defined (or not yet defined above it).
+- The same connection defined twice (a-b duplicated, including as b-a).
+- A metadata block ([...]) that is not syntactically valid (bad key, bad brackets, bad syntax).
+- Any zone=<type> value other than: normal, blocked, restricted, priority.
+- max_drones or max_link_capacity that is not a positive integer.
+- Any other line that doesn't match the expected syntax — the program must STOP
+  and print a clear error message indicating the offending line and the reason.
+
+NOTE: The program must be able to handle ANY number of drones (no hardcoded limit).
