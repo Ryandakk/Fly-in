@@ -1,5 +1,5 @@
 from parsing import Graph, Zone
-from algorithm import Dijk
+from algorithm import Dijk, ZONE_COST
 
 class Drone():
     def __init__(self, id: int, path_index: int,
@@ -54,16 +54,15 @@ class Scheduler():
             for drone in drones:
                 if drone.in_transit:
                     all_finished = False
+                    next_connection = self.next_link(drone)
+                    connections_occupancy[next_connection] = connections_occupancy.get(next_connection, 0) + 1
                     drone.transit_turns -= 1
                     if drone.transit_turns == 0:
                         drone.in_transit = False
-                        current_zone = drone.current_path[drone.path_index]
                         next_zone = drone.current_path[drone.path_index + 1]
-                        zone_occupancy[current_zone] -= 1
-                        zone_occupancy[next_zone] += 1
                         drone.path_index += 1
                         this_turn.append(
-                            f"Drone{drone.id}-{next_zone}"
+                            f"D{drone.id}-{next_zone}"
                         )
                     continue
 
@@ -83,17 +82,20 @@ class Scheduler():
                 if connections_occupancy.get(connection, 0) >= connection_capacity[connection]:
                     continue
                 connections_occupancy[connection] = connections_occupancy.get(connection, 0) + 1
-                if self.graph.zones[next_zone].zone == "restricted":
+                if destination.zone == "restricted":
                     drone.in_transit = True
-                    drone.transit_turns = 1
+                    drone.transit_turns = ZONE_COST["restricted"][0]
+                    drone.transit_turns -= 1
+                    zone_occupancy[current_zone] -= 1
+                    zone_occupancy[next_zone] += 1
                     this_turn.append(
-                        f"Drone{drone.id}-{current_zone}-{next_zone}"
+                        f"D{drone.id}-{current_zone}-{next_zone}"
                     )
                     continue
                 zone_occupancy[current_zone] -= 1
                 zone_occupancy[next_zone] += 1
                 drone.path_index += 1
-                this_turn.append(f"Drone{drone.id}-{next_zone}")
+                this_turn.append(f"D{drone.id}-{next_zone}")
             if this_turn:
                 turns.append(this_turn)
             if all_finished:

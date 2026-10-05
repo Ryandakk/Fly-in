@@ -28,6 +28,16 @@ class Graph:
         self.start_zone: Optional[Zone] = None
         self.end_zone: Optional[Zone] = None
         self.connections: dict[tuple[str, str], int] = {}
+        self.neighbors: dict[str, list[str]] = {}
+
+    def add_zone(self, zone: Zone) -> None:
+        self.zones[zone.name] = zone
+        self.neighbors[zone.name] = []
+
+    def add_connection(self, name1: str, name2: str, capacity: int) -> None:
+        self.connections[tuple(sorted((name1, name2)))] = capacity
+        self.neighbors[name1].append(name2)
+        self.neighbors[name2].append(name1)
 
 
 class Parsing:
@@ -37,6 +47,7 @@ class Parsing:
     def parsing(self) -> Graph:
         graph1 = Graph()
         nb_drones_seen = False
+        lineno = 0
 
         try:
             with open(self.path, "r") as f:
@@ -59,7 +70,7 @@ class Parsing:
                                 lineno, f"number of drones should be an integer , got {value}")
                         if nb_drones <= 0:
                             raise ParseError(
-                                lineno, f"Number MUST be positive")
+                                lineno, "Number MUST be positive")
                         graph1.nb_drones = nb_drones
                         nb_drones_seen = True
                     elif line.startswith("start_hub"):
@@ -114,7 +125,7 @@ class Parsing:
                                             lineno, f"max_drones must be an int, caught {value}")
                                     if max_drones <= 0:
                                         raise ParseError(
-                                            lineno, "max_drones should be postive")
+                                            lineno, "max_drones should be positive")
                                 elif key == "zone":
                                     if value not in ("normal", "blocked", "restricted", "priority"):
                                         raise ParseError(
@@ -127,7 +138,7 @@ class Parsing:
                             name, x, y, zone_type, color, max_drones)
                         start_zone.is_start = True
                         graph1.start_zone = start_zone
-                        graph1.zones[name] = start_zone
+                        graph1.add_zone(start_zone)
 
                     elif line.startswith("end_hub"):
                         if not nb_drones_seen:
@@ -193,8 +204,8 @@ class Parsing:
                         end_zone = Zone(name, x, y, zone_type,
                                         color, max_drones)
                         end_zone.is_end = True
-                        graph1.zones[name] = end_zone
                         graph1.end_zone = end_zone
+                        graph1.add_zone(end_zone)
 
                     elif line.startswith("hub"):
                         if not nb_drones_seen:
@@ -249,10 +260,13 @@ class Parsing:
                                             lineno, f"max_drones should be an integer , caught {value}")
                                     if max_drones <= 0:
                                         raise ParseError(
-                                            lineno, f"max_drones number must be an postive")
+                                            lineno, "max_drones number must be a positive")
+                                else:
+                                    raise ParseError(
+                                        lineno, f"unknown metadata key '{key}'")
                         hub_object = Zone(
                             name, x, y, zone_type, color, max_drones)
-                        graph1.zones[name] = hub_object
+                        graph1.add_zone(hub_object)
                     elif line.startswith("connection"):
                         if not nb_drones_seen:
                             raise ParseError(
@@ -279,6 +293,10 @@ class Parsing:
                         name1, name2 = fields_part.split("-", 1)
                         name1 = name1.strip()
                         name2 = name2.strip()
+                        if name1 == name2:
+                            raise ParseError(
+                                lineno, f"Zone {name1} cannot connect to itself"
+                            )
                         if name1 not in graph1.zones or name2 not in graph1.zones:
                             raise ParseError(
                                 lineno, f"{name1} and {name2} must be already created to be used in connection")
@@ -305,21 +323,17 @@ class Parsing:
                                 else:
                                     raise ParseError(
                                         lineno, f"unknown metadata key '{key}'")
-                        graph1.connections[conn_key] = max_link_capacity
+                        graph1.add_connection(name1, name2, max_link_capacity)
+                    else:
+                        raise ParseError(
+                            lineno, f"Unknown data {line}"
+                        )
         except FileNotFoundError:
             raise ParseError(0, f"file '{self.path}' not found")
-
+        if not nb_drones_seen:
+            raise ParseError(lineno, "nb_drones is missing")
         if graph1.start_zone is None:
             raise ParseError(lineno, "start_zone is missing")
         if graph1.end_zone is None:
             raise ParseError(lineno, "end_zone is missing")
-
         return graph1
-
-
-if __name__ == "__main__":
-    path: str = sys.argv[1]
-    pars1 = Parsing(path)
-    print(pars1.path)
-    graph1 = pars1.parsing()
-    print(graph1)

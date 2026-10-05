@@ -39,15 +39,9 @@ class Dijk:
     def neighbors(self, graph: Graph, zone_name: str) -> list[tuple[str, Cost]]:
         """Return (neighbor_name, move_cost) pairs reachable from zone_name."""
         result: list[tuple[str, Cost]] = []
-        for name1, name2 in graph.connections:
-            if zone_name == name1:
-                neighbor = name2
-            elif zone_name == name2:
-                neighbor = name1
-            else:
-                continue
-            neighbor_zone: Zone = graph.zones[neighbor]
+        for name in graph.neighbors[zone_name]:
+            neighbor_zone: Zone = graph.zones[name]
             if neighbor_zone.zone == "blocked":
                 continue
-            result.append((neighbor, ZONE_COST[neighbor_zone.zone]))
+            result.append((name, ZONE_COST[neighbor_zone.zone]))
         return result
