@@ -55,7 +55,8 @@ class Parsing:
                     line = rawline.strip()
                     if not line or line.startswith("#"):
                         continue
-                    if line.startswith("nb_drones"):
+                    keyword = line.split(":")[0].strip()
+                    if keyword == "nb_drones":
                         if nb_drones_seen:
                             raise ParseError(
                                 lineno, "duplicate 'nb_drone' line")
@@ -73,7 +74,7 @@ class Parsing:
                                 lineno, "Number MUST be positive")
                         graph1.nb_drones = nb_drones
                         nb_drones_seen = True
-                    elif line.startswith("start_hub"):
+                    elif keyword == "start_hub":
                         if not nb_drones_seen:
                             raise ParseError(
                                 lineno, "nb_drones must be declared before any start/end zone")
@@ -87,9 +88,13 @@ class Parsing:
                         if "[" in body:
                             if not body.endswith("]"):
                                 raise ParseError(
-                                    lineno, ": metablock unterminated")
+                                    lineno, "metablock unterminated")
                             fields_part, meta_part = body.split("[", 1)
                             meta_part = meta_part[:-1]
+                            if "[" in meta_part or "]" in meta_part:
+                                raise ParseError(
+                                    lineno, "Invalid Brackets in metadata"
+                                )
                         else:
                             fields_part, meta_part = body, ""
                         parts = fields_part.split()
@@ -110,11 +115,20 @@ class Parsing:
                                 lineno, f"coordinates must be integers, got '{x_str}', '{y_str}'")
                         color, zone_type, max_drones = "none", "normal", 1
                         if meta_part:
+                            keys: set[str] = set()
                             for tag in meta_part.split():
-                                if "=" not in tag:
+                                if tag.count("=") != 1:
                                     raise ParseError(
                                         lineno, f"invalid metadata '{tag}'")
                                 key, value = tag.split("=", 1)
+                                if key in keys:
+                                    raise ParseError(
+                                        lineno, f"duplicate metadata key '{key}'")
+                                keys.add(key)
+                                if value == "":
+                                    raise ParseError(
+                                        lineno,"Empty metadata"
+                                    )
                                 if key == "color":
                                     color = value
                                 elif key == "max_drones":
@@ -140,7 +154,7 @@ class Parsing:
                         graph1.start_zone = start_zone
                         graph1.add_zone(start_zone)
 
-                    elif line.startswith("end_hub"):
+                    elif keyword == "end_hub":
                         if not nb_drones_seen:
                             raise ParseError(
                                 lineno, "nb_drones must be declared before any start/end zone")
@@ -157,6 +171,10 @@ class Parsing:
                                     lineno, "metablock unterminated")
                             fields_part, meta_part = body.split("[", 1)
                             meta_part = meta_part[: -1]
+                            if "[" in meta_part or "]" in meta_part:
+                                raise ParseError(
+                                    lineno, "Invalid Brackets in metadata"
+                                    )
                         else:
                             fields_part, meta_part = body, ""
                         parts = fields_part.split()
@@ -177,11 +195,20 @@ class Parsing:
                                 lineno, f"coordinates must be integers, got {x_str} & {y_str}")
                         color, zone_type, max_drones = "none", "normal", 1
                         if meta_part:
+                            keys = set()
                             for tag in meta_part.split():
-                                if "=" not in tag:
+                                if tag.count("=") != 1:
                                     raise ParseError(
                                         lineno, f"invalid metablock format {tag}")
                                 key, value = tag.split("=", 1)
+                                if key in keys:
+                                    raise ParseError(
+                                        lineno, f"duplicate metadata key '{key}'")
+                                keys.add(key)
+                                if value == "":
+                                    raise ParseError(
+                                        lineno,"Empty metadata"
+                                    )
                                 if key == "color":
                                     color = value
                                 elif key == "max_drones":
@@ -207,7 +234,7 @@ class Parsing:
                         graph1.end_zone = end_zone
                         graph1.add_zone(end_zone)
 
-                    elif line.startswith("hub"):
+                    elif keyword == "hub":
                         if not nb_drones_seen:
                             raise ParseError(
                                 lineno, "nb_drones must be declared before hub")
@@ -220,6 +247,10 @@ class Parsing:
                                     lineno, "metablock unterminated")
                             fields_part, meta_part = body.split("[", 1)
                             meta_part = meta_part[: -1]
+                            if "[" in meta_part or "]" in meta_part:
+                                raise ParseError(
+                                    lineno, "Invalid Brackets in metadata"
+                                    )
                         else:
                             fields_part, meta_part = body, ""
                         parts = fields_part.split()
@@ -240,11 +271,22 @@ class Parsing:
                                 lineno, f"coordinates must be integers, got {x_str} & {y_str}")
                         zone_type, color, max_drones = "normal", "none", 1
                         if meta_part:
+                            keys = set()
                             for tag in meta_part.split():
-                                if "=" not in tag:
+                                if tag.count("=") != 1:
                                     raise ParseError(
                                         lineno, f"invalid metablock format {tag}")
                                 key, value = tag.split("=", 1)
+                                if key in keys:
+                                    raise ParseError(
+                                        lineno,f"duplicate metadata key {key}"
+                                    )
+                                else:
+                                    keys.add(key)
+                                if value == "":
+                                    raise ParseError(
+                                        lineno,"Empty metadata"
+                                    )
                                 if key == "zone":
                                     if value not in ("normal", "blocked", "restricted", "priority"):
                                         raise ParseError(
@@ -267,7 +309,7 @@ class Parsing:
                         hub_object = Zone(
                             name, x, y, zone_type, color, max_drones)
                         graph1.add_zone(hub_object)
-                    elif line.startswith("connection"):
+                    elif keyword == "connection":
                         if not nb_drones_seen:
                             raise ParseError(
                                 lineno, "nb drones must be declared before connections")
@@ -281,6 +323,10 @@ class Parsing:
                                     lineno, "metablock unterminated")
                             fields_part, meta_part = body.split("[", 1)
                             meta_part = meta_part[: -1]
+                            if "[" in meta_part or "]" in meta_part:
+                                raise ParseError(
+                                    lineno, "Invalid Brackets in metadata"
+                                    )
                         else:
                             fields_part, meta_part = body, ""
                         parts = fields_part.split()
@@ -306,11 +352,20 @@ class Parsing:
                                 lineno, f"duplicate connection '{name1}-{name2}'")
                         max_link_capacity = 1
                         if meta_part:
+                            keys = set()
                             for tag in meta_part.split():
-                                if "=" not in tag:
+                                if tag.count("=") != 1:
                                     raise ParseError(
                                         lineno, f"invalid metadata '{tag}'")
                                 key, value = tag.split("=", 1)
+                                if key in keys:
+                                    raise ParseError(
+                                        lineno, f"duplicate metadata key '{key}'")
+                                keys.add(key)
+                                if value == "":
+                                    raise ParseError(
+                                        lineno,"Empty metadata"
+                                    )
                                 if key == "max_link_capacity":
                                     try:
                                         max_link_capacity = int(value)
@@ -337,3 +392,16 @@ class Parsing:
         if graph1.end_zone is None:
             raise ParseError(lineno, "end_zone is missing")
         return graph1
+
+
+def main():
+    parsing1 = Parsing("maps/easy/01_linear_path.txt")
+    graph1 =  parsing1.parsing()
+    for zone in graph1.zones.values():
+        print(zone.name, zone.zone, zone.color, zone.max_drones)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ParseError, ValueError) as e:
+        print(e)

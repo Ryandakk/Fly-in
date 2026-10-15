@@ -7,13 +7,12 @@ class Drone():
         self.id = id
         self.path_index = path_index
         self.current_path = current_path
-        self.alternate_path = None
         self.in_transit = False
         self.transit_turns = 0
 
 
 class Scheduler():
-    def __init__(self, nb_drones: int, drones: list[Drone], graph: Graph) -> None:
+    def __init__(self, drones: list[Drone], graph: Graph) -> None:
         self.drones = drones
         self.graph = graph
 
@@ -34,7 +33,7 @@ class Scheduler():
         connection_capacity: dict[tuple[str, str], int] = {}
 
         for name, zone in self.graph.zones.items():
-            zone_capacity[name]= zone.max_drones
+            zone_capacity[name] = zone.max_drones
         for name in self.graph.zones:
             zone_occupancy[name] = 0
 
@@ -45,7 +44,6 @@ class Scheduler():
             connection_capacity[connection] = capacity
         
         turns: list[list[str]] = []
-        self.find_paths()
         while True:
             all_finished = True
             this_turn: list[str] = []
@@ -75,8 +73,6 @@ class Scheduler():
                 unlimited = destination.is_start or destination.is_end
 
                 if not unlimited and (zone_occupancy[next_zone] >= zone_capacity[next_zone]):
-                    if drone.alternate_path is not None:
-                        drone.current_path = drone.alternate_path
                     continue
                 connection = self.sort_connections(current_zone, next_zone)
                 if connections_occupancy.get(connection, 0) >= connection_capacity[connection]:
@@ -101,24 +97,6 @@ class Scheduler():
             if all_finished:
                 break
         return turns
-
-    def find_paths(self) -> None:
-        drones = self.drones
-        algo = Dijk()
-        for drone in drones:
-            dronepath = drone.current_path
-            start = drone.current_path[0]
-            end = drone.current_path[len(dronepath) - 1]
-            connection = self.sort_connections(dronepath[0], dronepath[1])
-            capacity = self.graph.connections[connection]
-            del self.graph.connections[connection]
-            try:
-                alternate_path = algo.cheapest_path(self.graph, start, end)
-                drone.alternate_path = alternate_path
-            except ValueError:
-                drone.alternate_path = None
-            finally:
-                self.graph.connections[connection] = capacity
 
             
 
