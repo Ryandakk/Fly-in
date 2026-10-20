@@ -1,0 +1,4 @@
+arcade
+Pillow
+flake8
+mypy

@@ -11,7 +11,13 @@ ZONE_COST: dict[str, Cost] = {
 
 
 class Dijk:
-    def cheapest_path(self, graph: Graph, start: str, end: str, load: Optional[dict[str, int]] = None) -> list[str]:
+    """Dijkstra-based pathfinder that accounts
+    for zone-type cost and congestion load."""
+
+    def cheapest_path(self, graph: Graph,
+                      start: str,
+                      end: str,
+                      load: Optional[dict[str, int]] = None) -> list[str]:
         """Return the cheapest sequence of zone names from start to end."""
         best_cost = {start: (0, 0)}
         came_from: dict[str, str] = {}
@@ -37,7 +43,9 @@ class Dijk:
         path.reverse()
         return path
 
-    def neighbors(self, graph: Graph, zone_name: str, load: Optional[dict[str, int]] = None) -> list[tuple[str, Cost]]:
+    def neighbors(self, graph: Graph, zone_name: str,
+                  load: Optional[
+                   dict[str, int]] = None) -> list[tuple[str, Cost]]:
         """Return (neighbor_name, move_cost) pairs reachable from zone_name."""
         result: list[tuple[str, Cost]] = []
         for name in graph.neighbors[zone_name]:
@@ -51,6 +59,14 @@ class Dijk:
         return result
 
     def plan_paths(self, graph: Graph) -> list[list[str]]:
+        """Plan one path per drone from start to end,
+        spreading drones to ease congestion.
+
+        Each planned path adds load to the zones it crosses,so later drones are
+        nudged toward less-congested alternatives.
+        """
+        assert graph.start_zone is not None
+        assert graph.end_zone is not None
         start: str = graph.start_zone.name
         end: str = graph.end_zone.name
 

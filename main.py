@@ -4,7 +4,12 @@ from renderer import play
 from algorithm import Dijk
 from parsing import ParseError, Parsing
 
+
 def main() -> None:
+    """Parse the map file given, run the simulation, then play it back.
+
+    Prints one line per turn, then opens the graphical replay window.
+    """
     if len(sys.argv) != 2:
         print("usage: python3 main.py <map_file>")
         sys.exit(1)
@@ -24,7 +29,10 @@ def main() -> None:
     except (ValueError, ParseError) as e:
         print(e)
         sys.exit(1)
-    play(graphfile1, turnslist)
+    try:
+        play(graphfile1, turnslist)
+    except Exception as e:
+        print(f"warning: could not open graphical replay : {e}")
 
 
 if __name__ == "__main__":

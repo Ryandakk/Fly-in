@@ -1,10 +1,10 @@
 import arcade
 from PIL import ImageColor
-from parsing import Graph, Zone
+from parsing import Graph
 
-ZONE_MARKS: dict[str, str] = {
-    "blocked": "X", "restricted": "R", "priority": "P", "normal": "",
-}
+# ZONE_MARKS: dict[str, str] = {
+#     "blocked": "X", "restricted": "R", "priority": "P", "normal": "",
+# }
 
 WINDOW_W = 1280
 WINDOW_H = 720
@@ -14,10 +14,14 @@ SECONDS_PER_TURN = 0.55
 
 class FlyWindow(arcade.Window):
     """Animate a finished simulation as a 2D map of zones and drones."""
+
     def __init__(self, graph: Graph, turns: list[list[str]]) -> None:
+        """Compute the pixel scale/offset for
+        the map and place every drone at the start."""
         super().__init__(WINDOW_W, WINDOW_H)
         self.graph = graph
         self.turns = turns
+        assert graph.start_zone is not None
         xs = [z.x for z in graph.zones.values()]
         ys = [z.y for z in graph.zones.values()]
         self.min_x, self.min_y = min(xs), min(ys)
@@ -25,13 +29,12 @@ class FlyWindow(arcade.Window):
             (WINDOW_W - 2 * MARGIN) / max(max(xs) - self.min_x, 1),
             (WINDOW_H - 2 * MARGIN) / max(max(ys) - self.min_y, 1)
         )
-        self.drones = {}
-        for i in range (1, graph.nb_drones + 1):
+        self.drones: dict[int, tuple[str, ...]] = {}
+        for i in range(1, graph.nb_drones + 1):
             self.drones[i] = (graph.start_zone.name,)
         self.turn = 0
         self.timer = 0.0
-        
-        
+
     def point(self, *names: str) -> tuple[float, float]:
         """Pixel centre of one zone, or the midpoint of two."""
         zones = [self.graph.zones[name] for name in names]
@@ -40,7 +43,10 @@ class FlyWindow(arcade.Window):
         return (MARGIN + (x - self.min_x) * self.zoom,
                 MARGIN + (y - self.min_y) * self.zoom)
 
-    def zone_rgb(self, color: str) -> tuple[int, ...]:
+    def zone_rgb(self, color: str) -> (tuple[int, int, int] |
+                                       tuple[int, int, int, int]):
+        """Return the RGB value for a zone's color name,
+        falling back to light gray."""
         try:
             return ImageColor.getrgb(color)
         except ValueError:
@@ -51,13 +57,15 @@ class FlyWindow(arcade.Window):
         self.clear()
         for zone1, zone2 in self.graph.connections:
             arcade.draw_line(*self.point(zone1), *self.point(zone2),
-            ImageColor.getrgb("dimgray"), 2)
+                             ImageColor.getrgb("dimgray"), 2)
         for name, zone in self.graph.zones.items():
-            arcade.draw_circle_filled(*self.point(name), 30, self.zone_rgb(zone.color))
+            arcade.draw_circle_filled(*self.point(name),
+                                      30, self.zone_rgb(zone.color))
         for drone_id, location in self.drones.items():
             x, y = self.point(*location)
             offset = (drone_id - 1) * 10
-            arcade.draw_circle_filled(x + offset, y, 6, ImageColor.getrgb("grey"))
+            arcade.draw_circle_filled(x + offset, y, 6,
+                                      ImageColor.getrgb("grey"))
 
     def on_update(self, delta_time: float) -> None:
         """Apply one turn each time the timer elapses."""
@@ -70,6 +78,7 @@ class FlyWindow(arcade.Window):
 
         self.turn += 1
         self.timer = 0.0
+
 
 def play(graph: Graph, turns: list[list[str]]) -> None:
     """Open the window and run the animation until it is closed."""
