@@ -1,6 +1,6 @@
 .PHONY: install run debug clean lint lint-strict
 
-MAP ?= /sgoinfre/radakrou/fly-in/maps/easy/01_linear_path.txt
+MAP ?=maps/easy/02_simple_fork.txt
 PYTHON = .venv/bin/python3
 
 install:

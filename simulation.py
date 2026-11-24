@@ -47,8 +47,8 @@ class Scheduler():
         for the drones that moved that turn.
         """
         drones = self.drones
-        zone_capacity: dict[str, int] = {}
         zone_occupancy: dict[str, int] = {}
+        zone_capacity: dict[str, int] = {}
         connection_capacity: dict[tuple[str, str], int] = {}
         for name, zone in self.graph.zones.items():
             zone_capacity[name] = zone.max_drones
@@ -121,4 +121,4 @@ class Scheduler():
                 turns.append(this_turn)
             if all_finished:
                 break
-        return turns
+        return (turns)

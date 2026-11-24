@@ -43,6 +43,7 @@ class Graph:
         self.end_zone: Optional[Zone] = None
         self.connections: dict[tuple[str, str], int] = {}
         self.neighbors: dict[str, list[str]] = {}
+        self.coordinates: set[tuple[int, int]] = set()
 
     def add_zone(self, zone: Zone) -> None:
         """Register a zone on the map and give it an empty neighbor list."""
@@ -142,6 +143,11 @@ class Parsing:
                             raise ParseError(
                                 lineno, "coordinates must be integers, "
                                 f"got '{x_str}', '{y_str}'")
+                        if (x, y) in graph1.coordinates:
+                            raise ParseError(
+                                lineno, f"duplicate coordinates {(x, y)}"
+                            )
+                        graph1.coordinates.add((x, y))
                         color, zone_type, max_drones = "none", "normal", 1
                         if meta_part:
                             keys: set[str] = set()
@@ -170,13 +176,13 @@ class Parsing:
                                             f", caught {value}")
                                     if max_drones <= 0:
                                         raise ParseError(
-                                            lineno, "max_drones"
+                                            lineno, "max_drones "
                                             "should be positive")
                                 elif key == "zone":
                                     if value not in ("normal", "blocked",
                                                      "restricted", "priority"):
                                         raise ParseError(
-                                            lineno, "invalid zone"
+                                            lineno, "invalid zone "
                                             f"type '{value}'")
                                     zone_type = value
                                 else:
@@ -192,7 +198,7 @@ class Parsing:
                     elif keyword == "end_hub":
                         if not nb_drones_seen:
                             raise ParseError(
-                                lineno, "nb_drones must be declared"
+                                lineno, "nb_drones must be declared "
                                 "before any start/end zone")
                         if graph1.end_zone is not None:
                             raise ParseError(
@@ -231,18 +237,23 @@ class Parsing:
                             raise ParseError(
                                 lineno, "coordinates must be integers, "
                                 f"got {x_str} & {y_str}")
+                        if (x, y) in graph1.coordinates:
+                            raise ParseError(
+                                lineno, f"duplicate coordinates {(x, y)}"
+                            )
+                        graph1.coordinates.add((x, y))
                         color, zone_type, max_drones = "none", "normal", 1
                         if meta_part:
                             keys = set()
                             for tag in meta_part.split():
                                 if tag.count("=") != 1:
                                     raise ParseError(
-                                        lineno, "invalid metablock"
+                                        lineno, "invalid metablock "
                                         f"format {tag}")
                                 key, value = tag.split("=", 1)
                                 if key in keys:
                                     raise ParseError(
-                                        lineno, "duplicate metadata"
+                                        lineno, "duplicate metadata "
                                         f"key '{key}'")
                                 keys.add(key)
                                 if value == "":
@@ -256,7 +267,7 @@ class Parsing:
                                         max_drones = int(value)
                                     except ValueError:
                                         raise ParseError(
-                                            lineno, "max_drones should"
+                                            lineno, "max_drones should "
                                             "be an integer, "
                                             f"caught {value}")
                                     if max_drones <= 0:
@@ -268,12 +279,12 @@ class Parsing:
                                                      "restricted",
                                                      "priority"):
                                         raise ParseError(
-                                            lineno, "invalid zone"
+                                            lineno, "invalid zone "
                                             f"type '{value}'")
                                     zone_type = value
                                 else:
                                     raise ParseError(
-                                        lineno, "unknown metadata"
+                                        lineno, "unknown metadata "
                                         f"key '{key}'")
                         end_zone = Zone(name, x, y, zone_type,
                                         color, max_drones)
@@ -284,7 +295,7 @@ class Parsing:
                     elif keyword == "hub":
                         if not nb_drones_seen:
                             raise ParseError(
-                                lineno, "nb_drones must be"
+                                lineno, "nb_drones must be "
                                 "declared before hub")
                         if ":" not in line:
                             raise ParseError(lineno, "missing ':' after 'hub'")
@@ -320,13 +331,18 @@ class Parsing:
                             raise ParseError(
                                 lineno, "coordinates must be integers, "
                                 f"got {x_str} & {y_str}")
+                        if (x, y) in graph1.coordinates:
+                            raise ParseError(
+                                lineno, f"duplicate coordinates {(x, y)}"
+                            )
+                        graph1.coordinates.add((x, y))
                         zone_type, color, max_drones = "normal", "none", 1
                         if meta_part:
                             keys = set()
                             for tag in meta_part.split():
                                 if tag.count("=") != 1:
                                     raise ParseError(
-                                        lineno, "invalid metablock"
+                                        lineno, "invalid metablock "
                                         f"format {tag}")
                                 key, value = tag.split("=", 1)
                                 if key in keys:
@@ -353,7 +369,7 @@ class Parsing:
                                         max_drones = int(value)
                                     except ValueError:
                                         raise ParseError(
-                                            lineno, "max_drones should"
+                                            lineno, "max_drones should "
                                             "be an integer, "
                                             f"caught {value}")
                                     if max_drones <= 0:
@@ -391,19 +407,19 @@ class Parsing:
                         parts = fields_part.split()
                         if len(parts) != 1:
                             raise ParseError(
-                                lineno, "Format should be '<name1>-<name2>' ,"
-                                f"got {fields_part}")
+                                lineno, "Format should be '<name1>-<name2>',"
+                                f" got {fields_part}")
                         if "-" not in fields_part:
                             raise ParseError(
                                 lineno, "connection must be"
-                                " '<name1>-<name2>' ,"
-                                f"got '{fields_part}'")
+                                " '<name1>-<name2>',"
+                                f" got '{fields_part}'")
                         name1, name2 = fields_part.split("-", 1)
                         name1 = name1.strip()
                         name2 = name2.strip()
                         if name1 == name2:
                             raise ParseError(
-                                lineno, f"Zone {name1} cannot"
+                                lineno, f"Zone {name1} cannot "
                                 "connect to itself"
                             )
                         if (name1 not in graph1.zones or
@@ -427,7 +443,7 @@ class Parsing:
                                 key, value = tag.split("=", 1)
                                 if key in keys:
                                     raise ParseError(
-                                        lineno, "duplicate metadata"
+                                        lineno, "duplicate metadata "
                                         f"key '{key}'")
                                 keys.add(key)
                                 if value == "":
@@ -440,11 +456,11 @@ class Parsing:
                                     except ValueError:
                                         raise ParseError(
                                             lineno, "max_link_capacity must be"
-                                            f"an integer, got {value}")
+                                            f" an integer, got {value}")
                                     if max_link_capacity <= 0:
                                         raise ParseError(
                                             lineno, "max_link_capacity must"
-                                            "be positive")
+                                            " be positive")
                                 else:
                                     raise ParseError(
                                         lineno, "unknown metadata "
@@ -456,6 +472,11 @@ class Parsing:
                         )
         except FileNotFoundError:
             raise ParseError(0, f"file '{self.path}' not found")
+        except PermissionError:
+            raise ParseError(0, "Permission denied,"
+                             f" can't access file {self.path}")
+        except IsADirectoryError:
+            raise ParseError(0, f"{self.path} is a directory not a file")
         if not nb_drones_seen:
             raise ParseError(lineno, "nb_drones is missing")
         if graph1.start_zone is None:
